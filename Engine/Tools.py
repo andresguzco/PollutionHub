@@ -34,3 +34,7 @@ def phiFunction(
 
 def distanceCalc(coordinateA: list, coordinateB: list, unit: float) -> float:
     return math.dist(coordinateA, coordinateB) * unit
+
+
+def estimateModel() -> object:
+    return object
