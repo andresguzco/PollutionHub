@@ -28,7 +28,7 @@ def phiFunction(
         angle: float,
         lag: int
 ) -> float:
-    result: float = phi - rho * (((distance * n)/(velocity * np.cos(angle))) - lag)**2
+    result: float = phi - rho * abs(((distance * n)/(velocity * np.cos(angle))) - lag)
     return result if result > 0 else 0.0
 
 
