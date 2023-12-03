@@ -1,6 +1,7 @@
 from Engine.Simulation import PollutionSimulation
 from numpy import ndarray, linspace
 from tqdm import tqdm
+import numpy as np
 
 
 def gridSearch(
@@ -8,7 +9,8 @@ def gridSearch(
         phi_max: float,
         rho_min: float,
         rho_max: float,
-        num_steps: int
+        num_steps: int,
+        save: bool = False
 ):
     phi_values: ndarray = linspace(phi_min, phi_max, num_steps)
     rho_values: ndarray = linspace(rho_min, rho_max, num_steps)
@@ -32,6 +34,15 @@ def gridSearch(
 
                 filename: str = f"../Output/phi_{phi:.2f}_rho_{rho:.2f}.png"
                 simulation.plot_results(Y, filename)
+
+                Database: np.ndarray = np.zeros(shape=(1000, 2))
+                Database[:, 0] = simulation.windSpeed
+                Database[:, 1] = simulation.windDirection
+
+                if save:
+                    np.savetxt("../DTO/PollutionSim", Y, delimiter=",")
+                    np.savetxt("../DTO/WeatherSim", Database, delimiter=",")
+                    np.savetxt("../DTO/LocationGrid", simulation.Location, delimiter=",")
             except OverflowError:
                 print(f"Overflow error for Phi = {phi:.2f}, Rho = {rho:.2f}. Skipping.")
                 continue
@@ -44,7 +55,8 @@ def main() -> None:
         phi_max=0.22,
         rho_min=0.22,
         rho_max=0.22,
-        num_steps=1
+        num_steps=1,
+        save=True
     )
     return None
 

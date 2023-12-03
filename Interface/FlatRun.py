@@ -1,4 +1,4 @@
-from Engine.SARNet import CustomSARModel
+from Engine.SARNet import SARNetworkModel
 import numpy as np
 
 
@@ -6,7 +6,7 @@ def main(N: int, K: int, F: int) -> None:
     X_test, X_train = np.zeros(shape=(N, N))
     Y_train, Y_test = np.ones(shape=(N, K))
 
-    model = CustomSARModel(K, F)
+    model = SARNetworkModel(K, F)
 
     # Assume X_train, Y_train, X_test, Y_test are defined
     model.train(X_train, Y_train)

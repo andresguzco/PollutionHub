@@ -4,7 +4,7 @@ import tensorflow as tf
 import numpy as np
 
 
-class CustomSARModel:
+class SARNetworkModel:
     def __init__(self, numLocations: int = 9, inputDim: int = 1) -> None:
         self.num_locations: int = numLocations
         self.input_dim: int = inputDim  # Dimension of X
