@@ -23,7 +23,9 @@ def gridSearch(
                     Rho=rho,
                     timeInterval=1,
                     meanPol=10.0,
-                    Distance=10.0
+                    Distance=10.0,
+                    muWind=20,
+                    phiWind=0.7
                 )
                 W: ndarray = simulation.computePhi()
                 Y: ndarray = simulation.simulateVar(W)
@@ -38,11 +40,11 @@ def gridSearch(
 
 def main() -> None:
     gridSearch(
-        phi_min=0.00,
-        phi_max=1.00,
-        rho_min=0.00,
-        rho_max=1.00,
-        num_steps=10
+        phi_min=0.22,
+        phi_max=0.22,
+        rho_min=0.22,
+        rho_max=0.22,
+        num_steps=1
     )
     return None
 

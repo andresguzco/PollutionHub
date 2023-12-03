@@ -17,6 +17,8 @@ class PollutionSimulation:
             timeInterval: int = 1,
             meanPol: float = 10.0,
             Distance: float = 10.0,
+            muWind: float = 20.0,
+            phiWind: float = 0.8
     ):
         random.seed(123)
         self.N: int = N
@@ -26,14 +28,20 @@ class PollutionSimulation:
         self.meanPol: float = meanPol
         self.Distance: float = Distance
         self.timeInterval: int = timeInterval
+        self.muWind: float = muWind
+        self.phiWind: float = phiWind
         self.GridSize: List[int] = [x for x in range(-1, 2)]
-        # The Location is now a 2D numpy ndarray instead of a dict
         self.Location: np.ndarray = np.array(list(product(self.GridSize, repeat=2)))
         self.K: int = len(self.GridSize) ** 2
-        self.windSpeed: np.ndarray = np.ones(shape=N) * 20
+        self.windSpeed: np.ndarray = np.random.normal(muWind, 1, N)
         self.windDirection: np.ndarray = np.random.uniform(low=0, high=360, size=[N])
         self.initialPollution: float = np.random.normal(loc=50, scale=2.5, size=[1, self.K])
         self.Y: np.ndarray = np.zeros([N, self.K])
+
+    def updateWindSpeed(self) -> None:
+        epsilon = np.random.normal(0, 1, self.N)
+        self.windSpeed = self.muWind + self.phiWind * (self.windSpeed - self.muWind) + epsilon
+        return None
 
     def computePhi(self) -> np.ndarray:
         return self._phiComputation(
@@ -45,13 +53,11 @@ class PollutionSimulation:
             Lag=self.Lag,
             N=self.N,
             K=self.K,
-            # We pass the numpy array Location to the Numba function
             Location=self.Location,
             Distance=self.Distance
         )
 
     @staticmethod
-    # Update the method signature to receive a np.ndarray instead of a Dict
     @jit(nopython=True)
     def _phiComputation(
             Phi: float,
