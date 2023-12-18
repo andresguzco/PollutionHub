@@ -7,7 +7,13 @@ import numpy as np
 import random
 
 
-class PollutionSimulation:
+# TODO: Label locations
+# TODO: Separate heatmaps per column to observe dynamics in each locations. Tessellate the heatmap
+# TODO: Initialise to the conditional mean
+# TODO: Visualisation for a finely grain mesh and the funnel of the effects of the pollution dispersion
+
+
+class PollutionSimulation(object):
     def __init__(
             self,
             N: int = 1000,
@@ -18,30 +24,45 @@ class PollutionSimulation:
             meanPol: float = 10.0,
             Distance: float = 10.0,
             muWind: float = 20.0,
-            phiWind: float = 0.8
+            phiWind: float = 0.8,
+            fixWindSpeed: bool = True,
+            fixWindDirection: bool = True,
+            formulation: str = "Quadratic"
     ):
+        super().__init__()
         random.seed(123)
+
         self.N: int = N
         self.Lag: int = Lag
         self.Phi: float = Phi
         self.Rho: float = Rho
+
         self.meanPol: float = meanPol
         self.Distance: float = Distance
         self.timeInterval: int = timeInterval
-        self.muWind: float = muWind
         self.phiWind: float = phiWind
+
         self.GridSize: List[int] = [x for x in range(-1, 2)]
         self.Location: np.ndarray = np.array(list(product(self.GridSize, repeat=2)))
         self.K: int = len(self.GridSize) ** 2
-        self.windSpeed: np.ndarray = np.random.normal(muWind, 1, N)
-        self.windDirection: np.ndarray = np.random.uniform(low=0, high=360, size=[N])
+
+        if fixWindSpeed:
+            self.windSpeed: np.ndarray = np.random.normal(muWind, 1, N)
+        else:
+            self.windSpeed: np.ndarray = np.ones(N) * muWind
+        if fixWindDirection:
+            self.windDirection: np.ndarray = np.ones(N) * 180
+        else:
+            self.windDirection: np.ndarray = np.random.uniform(low=0, high=360, size=[N])
+
         self.initialPollution: float = np.random.normal(loc=50, scale=2.5, size=[1, self.K])
         self.Y: np.ndarray = np.zeros([N, self.K])
+        self.formulation = formulation
 
-    def updateWindSpeed(self) -> None:
-        epsilon = np.random.normal(0, 1, self.N)
-        self.windSpeed = self.muWind + self.phiWind * (self.windSpeed - self.muWind) + epsilon
-        return None
+    # def updateWindSpeed(self) -> None:
+    #     epsilon = np.random.normal(0, 1, self.N)
+    #     self.windSpeed = self.muWind + self.phiWind * (self.windSpeed - self.muWind) + epsilon
+    #     return None
 
     def computePhi(self) -> np.ndarray:
         return self._phiComputation(
@@ -54,7 +75,8 @@ class PollutionSimulation:
             N=self.N,
             K=self.K,
             Location=self.Location,
-            Distance=self.Distance
+            Distance=self.Distance,
+            formulation=self.formulation
         )
 
     @staticmethod
@@ -69,11 +91,12 @@ class PollutionSimulation:
             N: int,
             K: int,
             Location: np.ndarray,
-            Distance: float
+            Distance: float,
+            formulation: str = "Quadratic"
     ) -> np.ndarray:
         W: np.ndarray = np.zeros((N, K, K))
         for k in range(N):
-            for i in range(K):  # Iterate over i and j in range(K)
+            for i in range(K):
                 for j in range(K):
                     W[k, i, j] = 0 if i == j else phiFunction(
                         phi=Phi,
@@ -90,12 +113,15 @@ class PollutionSimulation:
                             coordinateB=Location[j],
                             windDir=windDirection[k]
                         ),
-                        lag=Lag
+                        lag=Lag,
+                        formulation=formulation
                     )
         return W
 
     def simulateVar(self, W_input: np.ndarray) -> np.ndarray:
         Yinput: np.ndarray = np.zeros([self.N, self.K])
+        self.windSpeed = self.windSpeed[100:]
+        self.windDirection = self.windDirection[100:]
         return self._simComputation(
             N=self.N,
             K=self.K,
@@ -120,7 +146,7 @@ class PollutionSimulation:
             Y[i, :] = (
                     meanPol + np.dot(W[i, :, :], Y[i - 1, :].transpose()) +
                     np.random.normal(loc=0, scale=1, size=(1, K)))
-        return Y
+        return Y[100:, :]
 
     @staticmethod
     def plot_results(Y: np.ndarray, filepath: str) -> None:
@@ -157,9 +183,13 @@ def phiFunction(
         n: int,
         velocity: np.ndarray,
         angle: float,
-        lag: int
+        lag: int,
+        formulation: str = "Absolute"
 ) -> float:
-    result = phi - rho * (((distance * n) / (velocity * np.cos(angle))) - lag) ** 2
+    if formulation == "Absolute":
+        result = phi - rho * abs(((distance * n) / (velocity * np.cos(angle))) - lag)
+    else:
+        result = phi - rho * (((distance * n) / (velocity * np.cos(angle))) - lag) ** 2
     return result if result > 0 else 0.0
 
 

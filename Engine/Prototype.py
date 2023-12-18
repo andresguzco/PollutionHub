@@ -3,13 +3,15 @@ import tensorflow as tf
 import numpy as np
 from typing import Tuple
 
+# TODO: Set up NN for the linear regression parameter
+
 
 class CustomModel:
     def __init__(self, input_size: int = 100000) -> None:
         self.input_size: int = input_size
         self.model: tf.keras.Sequential = self._build_model()
 
-    def _generate_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _generate_data(self) -> Tuple[np.ndarray, np.ndarray]:
         xTrain = np.sort(np.random.uniform(-1, 1, size=self.input_size)).reshape(-1, 1)
         yTrain = 2 + np.cos(4 * np.pi * xTrain)
         return xTrain, yTrain
