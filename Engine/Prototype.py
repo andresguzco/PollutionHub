@@ -3,8 +3,6 @@ import tensorflow as tf
 import numpy as np
 from typing import Tuple
 
-# TODO: Set up NN for the linear regression parameter
-
 
 class CustomModel:
     def __init__(self, input_size: int = 100000) -> None:

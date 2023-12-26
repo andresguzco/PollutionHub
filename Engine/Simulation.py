@@ -8,12 +8,13 @@ import random
 
 
 # TODO: Label locations
-# TODO: Separate heatmaps per column to observe dynamics in each locations. Tessellate the heatmap
 # TODO: Initialise to the conditional mean
+# TODO: Separate heatmaps per column to observe dynamics in each locations. Tessellate the heatmap
 # TODO: Visualisation for a finely grain mesh and the funnel of the effects of the pollution dispersion
 
 
 class PollutionSimulation(object):
+
     def __init__(
             self,
             N: int = 1000,
@@ -29,7 +30,6 @@ class PollutionSimulation(object):
             fixWindDirection: bool = True,
             formulation: str = "Quadratic"
     ):
-        super().__init__()
         random.seed(123)
 
         self.N: int = N
