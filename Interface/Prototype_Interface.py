@@ -1,11 +1,10 @@
-from Engine.Prototype import CustomModel
+from Engine.NNTemplate import GeneralNN
 
 
 def main() -> None:
-    Model = CustomModel()
+    Model = GeneralNN()
     Model.train()
-    xTrain, yTrain, yHat = Model.evaluate()
-    Model.plot_results(xTrain, yTrain, yHat)
+    Model.predict(plot=True)
     return None
 
 
