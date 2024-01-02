@@ -2,9 +2,11 @@ from Engine.NNTemplate import GeneralNN
 
 
 def main() -> None:
-    Model = GeneralNN()
-    Model.train()
-    Model.predict(plot=True)
+    iN: int = int(1e5)
+
+    generalModel = GeneralNN(iN=iN)
+    generalModel.train()
+    generalModel.predict(plot=True)
     return None
 
 
