@@ -13,7 +13,7 @@ class GeneralNN:
             Loss: Callable = None,
             Data: Dict[str, Any] = None,
             Model: tf.keras.Model = None,
-            Optimiser: tf.keras.optimizers.Optimiser = None
+            Optimiser: tf.keras.optimizers.Optimizer = None
     ):
         self.N: int = iN
         self.data: Dict[str, np.ndarray] = Data if Data else self.__prepareData__()
