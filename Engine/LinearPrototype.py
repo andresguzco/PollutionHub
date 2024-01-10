@@ -11,5 +11,3 @@ def fnLoss(y: ndarray, yPred: ndarray) -> Tensor:
 class SequenceModel(GeneralNN):
     def __init__(self, iN: int):
         super().__init__(iN=iN, Loss=fnLoss)
-
-

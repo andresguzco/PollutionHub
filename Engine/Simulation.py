@@ -7,9 +7,6 @@ import numpy as np
 import random
 
 
-# TODO: Label locations
-# TODO: Initialise to the conditional mean
-# TODO: Separate heatmaps per column to observe dynamics in each locations. Tessellate the heatmap
 # TODO: Visualisation for a finely grain mesh and the funnel of the effects of the pollution dispersion
 
 
@@ -28,7 +25,7 @@ class PollutionSimulation(object):
             phiWind: float = 0.8,
             fixWindSpeed: bool = True,
             fixWindDirection: bool = True,
-            formulation: str = "Quadratic"
+            formulation: str = "Quadratic",
     ):
         random.seed(123)
 
@@ -58,11 +55,6 @@ class PollutionSimulation(object):
         self.initialPollution: float = np.random.normal(loc=50, scale=2.5, size=[1, self.K])
         self.Y: np.ndarray = np.zeros([N, self.K])
         self.formulation = formulation
-
-    # def updateWindSpeed(self) -> None:
-    #     epsilon = np.random.normal(0, 1, self.N)
-    #     self.windSpeed = self.muWind + self.phiWind * (self.windSpeed - self.muWind) + epsilon
-    #     return None
 
     def computePhi(self) -> np.ndarray:
         return self._phiComputation(
@@ -117,6 +109,9 @@ class PollutionSimulation(object):
                         formulation=formulation
                     )
         return W
+
+    def _computeMean(self):
+        return
 
     def simulateVar(self, W_input: np.ndarray) -> np.ndarray:
         Yinput: np.ndarray = np.zeros([self.N, self.K])
