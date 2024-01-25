@@ -4,6 +4,11 @@ import tensorflow as tf
 import numpy as np
 
 
+# TODO: Add structure for the covariates of the time-series
+# TODO: Discuss the spatial structure of the data.
+#  Should it include coordinates? Should it only include weather covariates?
+
+
 class MultivariateKalmanFilter:
     def __init__(
             self,
