@@ -30,6 +30,7 @@ class SARNetworkModel:
     def train(self, X: np.ndarray, Y: np.ndarray, epochs: int = 100, batch_size: int = 32) -> None:
         self.model.compile(optimizer='adam', loss=self._custom_loss)
         self.model.fit(X, Y, batch_size=batch_size, epochs=epochs)
+        return None
 
     @staticmethod
     def _custom_loss(y_true: tf.Tensor, y_pred: Tuple[tf.Tensor, tf.Tensor]) -> tf.Tensor:
@@ -42,7 +43,6 @@ class SARNetworkModel:
         # Evaluate the model
         loss = self.model.evaluate(X, Y, verbose=0)
         y_pred = self.model.predict(X)
-
         # Extract rho and W for further analysis or plotting
         rho, W = self.model(X)
         return loss, rho.numpy(), W.numpy()
@@ -51,14 +51,12 @@ class SARNetworkModel:
     def plot_results(X: np.ndarray, Y: np.ndarray, rho: np.ndarray, W: np.ndarray) -> None:
         # Assuming the first dimension of X is related to the spatial locations
         plt.figure(figsize=(12, 6))
-
         # Plotting rho values
         plt.subplot(1, 2, 1)
         plt.title("Estimated Rho Values")
         plt.plot(X[:, 0], rho, 'o')
         plt.xlabel("X[0]")
         plt.ylabel("Rho")
-
         # Plotting W matrix as a heatmap
         plt.subplot(1, 2, 2)
         plt.title("Estimated W Matrix")
@@ -66,6 +64,6 @@ class SARNetworkModel:
         plt.colorbar()
         plt.xlabel("Location")
         plt.ylabel("Location")
-
         plt.tight_layout()
         plt.show()
+        return None

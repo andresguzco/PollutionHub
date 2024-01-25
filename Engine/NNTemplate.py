@@ -9,23 +9,39 @@ import numpy as np
 class GeneralNN:
     def __init__(
             self,
-            iN: int,
+            iN: int = 1000,
+            ModelConfig: Dict[str, Any] = None,
             Loss: Callable = None,
             Data: Dict[str, Any] = None,
-            Model: tf.keras.Model = None,
-            Optimiser: tf.keras.optimizers.Optimizer = None
+            Optimiser: tf.keras.optimizers.Optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
     ):
-        self.N: int = iN
+        if not ModelConfig:
+            ModelConfig = {
+                'layers': [
+                    {'type': 'Dense', 'params': {'units': 64, 'activation': 'relu', 'input_shape': (1,)}},
+                    {'type': 'Dense', 'params': {'units': 64, 'activation': 'relu'}},
+                    {'type': 'Dense', 'params': {'units': 1}}
+                ]
+            }
+        self.N = iN
         self.data: Dict[str, np.ndarray] = Data if Data else self.__prepareData__()
-        self.model: tf.keras.Sequential = Model if Model else tf.keras.Sequential([
-            tf.keras.layers.Dense(64, activation='relu', input_shape=(1,)),
-            tf.keras.layers.Dense(64, activation='relu'),
-            tf.keras.layers.Dense(1)
-        ])
-        self.model.compile(
-            optimizer=Optimiser if Optimiser else tf.keras.optimizers.Adam(learning_rate=0.001),
-            loss=Loss if Loss else 'mean_squared_error'
-        )
+        self.model: tf.keras.Sequential = self.__createModel__(ModelConfig)
+        self.model.compile(optimizer=Optimiser, loss=Loss if Loss else 'mean_squared_error')
+
+    @staticmethod
+    def __createModel__(config):
+        model = tf.keras.Sequential()
+        for layer_config in config['layers']:
+            layer_type = layer_config['type']
+            if layer_type == 'Dense':
+                model.add(tf.keras.layers.Dense(**layer_config['params']))
+            elif layer_type == 'SimpleRNN':
+                model.add(tf.keras.layers.SimpleRNN(**layer_config['params']))
+            elif layer_type == 'LSTM':
+                model.add(tf.keras.layers.LSTM(**layer_config['params']))
+            elif layer_type == 'GRU':
+                model.add(tf.keras.layers.GRU(**layer_config['params']))
+        return model
 
     def predict(self, plot: bool) -> ndarray[Any, dtype[Any]]:
         yHat = self.model.predict(self["xTrain"])
@@ -34,8 +50,8 @@ class GeneralNN:
         return yHat
 
     def train(self) -> None:
-        self.model.fit(self["xTrain"], self["yyTrain"], batch_size=250, epochs=250)
-        self.model.evaluate(self["xTrain"], self["yyTrain"], batch_size=self.N, verbose=2)
+        self.model.fit(self["xTrain"], self["yTrain"], batch_size=250, epochs=250)
+        self.model.evaluate(self["xTrain"], self["yTrain"], batch_size=self.N, verbose=2)
         return None
 
     def __plotPrediction__(self, yHat) -> None:
@@ -51,7 +67,7 @@ class GeneralNN:
         xx: np.ndarray = np.random.normal(loc=5, size=self.N)
         yy: np.ndarray = xx * yTrain + np.random.normal(scale=0.01, size=self.N)
         yyTrain: np.ndarray = np.c_[yy, xx]
-        return {"xTrain": xTrain, "yTrain": yTrain, "yyTrain": yyTrain}
+        return {"xTrain": xTrain, "yTrain": yyTrain}
 
     def __getitem__(self, item):
         return self.data[item]

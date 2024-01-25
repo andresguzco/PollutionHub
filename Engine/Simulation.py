@@ -7,9 +7,6 @@ import numpy as np
 import random
 
 
-# TODO: Visualisation for a finely grain mesh and the funnel of the effects of the pollution dispersion
-
-
 class PollutionSimulation(object):
 
     def __init__(
@@ -19,7 +16,7 @@ class PollutionSimulation(object):
             Phi: float = 0.35,
             Rho: float = 0.50,
             timeInterval: int = 1,
-            meanPol: float = 10.0,
+            meanPol: float = 100.0,
             Distance: float = 10.0,
             muWind: float = 20.0,
             phiWind: float = 0.8,
@@ -34,7 +31,6 @@ class PollutionSimulation(object):
         self.Phi: float = Phi
         self.Rho: float = Rho
 
-        self.meanPol: float = meanPol
         self.Distance: float = Distance
         self.timeInterval: int = timeInterval
         self.phiWind: float = phiWind
@@ -42,6 +38,7 @@ class PollutionSimulation(object):
         self.GridSize: List[int] = [x for x in range(-1, 2)]
         self.Location: np.ndarray = np.array(list(product(self.GridSize, repeat=2)))
         self.K: int = len(self.GridSize) ** 2
+        self.meanPol: np.ndarray = np.ones(self.K) * meanPol
 
         if fixWindSpeed:
             self.windSpeed: np.ndarray = np.random.normal(muWind, 1, N)
@@ -52,7 +49,7 @@ class PollutionSimulation(object):
         else:
             self.windDirection: np.ndarray = np.random.uniform(low=0, high=360, size=[N])
 
-        self.initialPollution: float = np.random.normal(loc=50, scale=2.5, size=[1, self.K])
+        self.initialPollution: float = np.random.normal(loc=50, scale=1, size=[1, self.K])
         self.Y: np.ndarray = np.zeros([N, self.K])
         self.formulation = formulation
 
@@ -110,37 +107,38 @@ class PollutionSimulation(object):
                     )
         return W
 
-    def _computeMean(self):
-        return
+    def _updateMean(self, W: np.ndarray) -> None:
+        self.meanPol = np.mean(W, axis=0) @ self.meanPol
+        return None
 
     def simulateVar(self, W_input: np.ndarray) -> np.ndarray:
+        self._updateMean(W_input)
         Yinput: np.ndarray = np.zeros([self.N, self.K])
         self.windSpeed = self.windSpeed[100:]
         self.windDirection = self.windDirection[100:]
+        Errors: np.ndarray = np.abs(np.random.normal(loc=0, scale=1, size=(self.N, self.K)))
         return self._simComputation(
             N=self.N,
-            K=self.K,
             meanPol=self.meanPol,
             initialPollution=self.initialPollution,
             W=W_input,
-            Y=Yinput
+            Y=Yinput,
+            E=Errors
         )
 
     @staticmethod
     @jit(nopython=True)
     def _simComputation(
             N: int,
-            K: int,
-            meanPol: float,
+            meanPol: np.ndarray,
             initialPollution: float,
             W: np.ndarray,
-            Y: np.ndarray
+            Y: np.ndarray,
+            E: np.ndarray
     ) -> np.ndarray:
         Y[0, :] = meanPol + initialPollution
         for i in range(1, N):
-            Y[i, :] = (
-                    meanPol + np.dot(W[i, :, :], Y[i - 1, :].transpose()) +
-                    np.random.normal(loc=0, scale=1, size=(1, K)))
+            Y[i, :] = meanPol + np.dot(W[i, :, :], Y[i - 1, :].transpose()) + E[i, :]
         return Y[100:, :]
 
     @staticmethod
