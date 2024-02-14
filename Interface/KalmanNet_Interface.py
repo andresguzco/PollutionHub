@@ -1,6 +1,6 @@
 import pandas as pd
 
-import Engine.LinearPrototype as lp
+import Engine.Tensorflow.LinearPrototype as lp
 
 
 def main() -> None:

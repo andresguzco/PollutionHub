@@ -1,4 +1,4 @@
-from Engine.NNTemplate import GeneralNN
+from Engine.Tensorflow.NNTemplate import GeneralNN
 
 
 def main() -> None:
