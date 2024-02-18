@@ -1,7 +1,7 @@
-from Engine.NeuralEngine.KalmanNet import KalmanNet
-from Engine.NeuralEngine.Pipeline import Pipeline
+from Engine.KalmanNet import KalmanNet
+from Engine.Pipeline import Pipeline
 from Engine.ModelFrame import SystemModel
-from Engine.Filters.EKF import EKFTest
+from Engine.EKF import EKFTest
 from datetime import datetime
 import config as config
 import torch
