@@ -1,4 +1,3 @@
-"""This file contains the settings for the simulation"""
 import argparse
 
 

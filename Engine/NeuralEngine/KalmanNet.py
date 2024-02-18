@@ -2,6 +2,9 @@ import torch.nn.functional as func
 import torch.nn as nn
 import torch
 
+import Engine.ModelFrame
+import Interface.config
+
 
 class KalmanNet(torch.nn.Module):
     """
@@ -18,65 +21,78 @@ class KalmanNet(torch.nn.Module):
     * (`f`), the observation function (`h`), the number of state variables (`m`), the number of observation variables
     (`n`), the time step (`T`), and various fully connected layers (`FC
     *7`, `d_output_FC7`, `d_input_FC7`, `FC6`, `d_output_FC6`, `d_input_FC6`, `FC5`, `d"""
+
     ###################
     #   Constructor
     ###################
+
     def __init__(self):
         super().__init__()
-        self.KGain = None
-        self.m1y = None
-        self.m1x_prior = None
-        self.h_Sigma = None
-        self.m1x_prior_previous = None
-        self.y_previous = None
-        self.m1x_posterior_previous = None
-        self.m1x_posterior = None
-        self.f = None
-        self.m = None
-        self.h = None
-        self.n = None
-        self.T = None
-        self.FC7 = None
-        self.d_output_FC7 = None
-        self.d_input_FC7 = None
-        self.FC6 = None
-        self.d_output_FC6 = None
-        self.d_input_FC6 = None
-        self.FC5 = None
-        self.d_output_FC5 = None
-        self.d_input_FC5 = None
-        self.FC4 = None
-        self.d_output_FC4 = None
-        self.d_input_FC4 = None
-        self.FC3 = None
-        self.d_output_FC3 = None
-        self.d_input_FC3 = None
-        self.FC2 = None
-        self.d_hidden_FC2 = None
-        self.d_output_FC2 = None
-        self.h_S = None
-        self.d_input_FC2 = None
-        self.FC1 = None
-        self.d_output_FC1 = None
-        self.d_input_FC1 = None
-        self.GRU_S = None
-        self.d_hidden_S = None
-        self.d_input_S = None
-        self.h_Q = None
-        self.GRU_Sigma = None
-        self.d_hidden_Sigma = None
-        self.d_input_Sigma = None
-        self.GRU_Q = None
-        self.d_hidden_Q = None
-        self.d_input_Q = None
-        self.prior_S = None
-        self.prior_Sigma = None
-        self.prior_Q = None
-        self.batch_size = None
-        self.seq_len_input = None
-        self.device = None
+        self.m1y = None                           # First moment of y
+        self.KGain = None                         # Kalman Gain
+        self.y_previous = None                    # Previous observation
 
-    def NNBuild(self, SysModel, args):
+        self.m1x_prior = None                     # State at time t given t -1
+        self.m1x_prior_previous = None            # State at t - 1 given t - 2
+        self.m1x_posterior = None                 # State at time t given t
+        self.m1x_posterior_previous = None        # State at time t - 1 given t - 1
+
+        self.m = None                             # Dimension of the state vector
+        self.n = None                             # Dimension of the observation vector
+        self.T = None                             # Time steps
+
+        self.f = None                             # State transition function
+        self.h = None                             # Observation transition function
+        self.h_S = None                           # Hidden states - GRU - state covariance (S)
+        self.h_Q = None                           # Hidden states - GRU - process noise covariance (Q)
+        self.h_Sigma = None                       # Hidden states - GRU - measurement noise covariance (Sigma)
+
+        self.FC7 = None                           # Fully connected (linear) layer of the neural network
+        self.FC6 = None                           # Fully connected (linear) layer of the neural network
+        self.FC5 = None                           # Fully connected (linear) layer of the neural network
+        self.FC4 = None                           # Fully connected (linear) layer of the neural network
+        self.FC3 = None                           # Fully connected (linear) layer of the neural network
+        self.FC2 = None                           # Fully connected (linear) layer of the neural network
+        self.FC1 = None                           # Fully connected (linear) layer of the neural network
+
+        self.d_output_FC7 = None                  # Dimensions of the output for FC7
+        self.d_output_FC6 = None                  # Dimensions of the output for FC6
+        self.d_output_FC5 = None                  # Dimensions of the output for FC5
+        self.d_output_FC4 = None                  # Dimensions of the output for FC4
+        self.d_output_FC3 = None                  # Dimensions of the output for FC3
+        self.d_output_FC2 = None                  # Dimensions of the output for FC2
+        self.d_output_FC1 = None                  # Dimensions of the output for FC1
+
+        self.d_input_FC7 = None                   # Dimensions of the input for FC7
+        self.d_input_FC6 = None                   # Dimensions of the input for FC6
+        self.d_input_FC5 = None                   # Dimensions of the input for FC5
+        self.d_input_FC4 = None                   # Dimensions of the input for FC4
+        self.d_input_FC3 = None                   # Dimensions of the input for FC3
+        self.d_input_FC2 = None                   # Dimensions of the input for FC2
+        self.d_input_FC1 = None                   # Dimensions of the input for FC1
+
+        self.GRU_S = None                         # GRU networks - dynamics of the state covariance (S)
+        self.GRU_Q = None                         # GRU networks - dynamics of the process noise covariance (Q)
+        self.GRU_Sigma = None                     # GRU networks - dynamics of the measurement noise covariance (Sigma)
+
+        self.d_hidden_S = None                    # The dimensions of the hidden states for GRU_S
+        self.d_hidden_Q = None                    # The dimensions of the hidden states for GRU_Q
+        self.d_hidden_FC2 = None                  # The dimensions of the hidden states for FC2
+        self.d_hidden_Sigma = None                # The dimensions of the hidden states for GRU_Sigma
+
+        self.d_input_S = None                     # Input dimensions for GRU_S
+        self.d_input_Q = None                     # Input dimensions for GRU_Q
+        self.d_input_Sigma = None                 # Input dimensions for GRU_Sigma
+
+        self.prior_S = None                       # Prior estimates for the state covariance (S)
+        self.prior_Q = None                       # Prior estimates for the process noise covariance (Q)
+        self.prior_Sigma = None                   # Prior estimates for the measurement noise covariance (Sigma)
+
+        self.device = None                        # Computing device
+        self.batch_size = None                    # Size of the input batch
+        self.seq_len_input = None                 # Size of the sequence length of the input data
+
+    def NNBuild(self, SysModel: Engine.ModelFrame.SystemModel, args: Interface.config.general_settings()) -> None:
         """
         :param SysModel: The system model containing information about the dynamics and parameters of the system.
         :param args: Additional arguments for configuring the neural network.
@@ -98,6 +114,7 @@ class KalmanNet(torch.nn.Module):
         Note: The commented lines regarding the number of neurons in the hidden layers are provided as references
         and can be adjusted based on specific requirements.
         """
+
         # Device
         if args.use_cuda:
             self.device = torch.device('cuda')
@@ -105,19 +122,21 @@ class KalmanNet(torch.nn.Module):
             self.device = torch.device('cpu')
 
         self.InitSystemDynamics(SysModel.f, SysModel.H, SysModel.m, SysModel.n)
-
-        # Number of neurons in the 1st hidden layer
-        # H1_KNet = (SysModel.m + SysModel.n) * (10) * 8
-
-        # Number of neurons in the 2nd hidden layer
-        # H2_KNet = (SysModel.m * SysModel.n) * 1 * (4)
-
         self.InitKGainNet(SysModel.prior_Q, SysModel.prior_Sigma, SysModel.prior_S, args)
+
+        return None
 
     ######################################
     #   Initialize Kalman Gain Network
     ######################################
-    def InitKGainNet(self, prior_Q, prior_Sigma, prior_S, args):
+
+    def InitKGainNet(
+            self,
+            prior_Q: torch.tensor,
+            prior_Sigma: torch.tensor,
+            prior_S: torch.tensor,
+            args: Interface.config.general_settings()
+    ) -> None:
         """
         Initializes the KGainNet model.
 
@@ -136,11 +155,8 @@ class KalmanNet(torch.nn.Module):
         - `prior_Sigma` (Tensor): Prior for the latent variable Sigma
         - `prior_S` (Tensor): Prior for the latent variable S
         - `args` (object): Additional arguments
-
-        **Returns:**
-
-        - `None`
         """
+
         self.seq_len_input = 1          # KNet calculates time-step by time-step
         self.batch_size = args.n_batch  # Batch size
 
@@ -168,7 +184,8 @@ class KalmanNet(torch.nn.Module):
         self.d_output_FC1 = self.n ** 2
         self.FC1 = nn.Sequential(
             nn.Linear(self.d_input_FC1, self.d_output_FC1),
-            nn.ReLU()).to(self.device)
+            nn.ReLU()
+        ).to(self.device)
 
         # Fully connected 2
         self.d_input_FC2 = self.d_hidden_S + self.d_hidden_Sigma
@@ -177,47 +194,56 @@ class KalmanNet(torch.nn.Module):
         self.FC2 = nn.Sequential(
             nn.Linear(self.d_input_FC2, self.d_hidden_FC2),
             nn.ReLU(),
-            nn.Linear(self.d_hidden_FC2, self.d_output_FC2)).to(self.device)
+            nn.Linear(self.d_hidden_FC2, self.d_output_FC2)
+        ).to(self.device)
 
         # Fully connected 3
         self.d_input_FC3 = self.d_hidden_S + self.d_output_FC2
         self.d_output_FC3 = self.m ** 2
         self.FC3 = nn.Sequential(
             nn.Linear(self.d_input_FC3, self.d_output_FC3),
-            nn.ReLU()).to(self.device)
+            nn.ReLU()
+        ).to(self.device)
 
         # Fully connected 4
         self.d_input_FC4 = self.d_hidden_Sigma + self.d_output_FC3
         self.d_output_FC4 = self.d_hidden_Sigma
         self.FC4 = nn.Sequential(
             nn.Linear(self.d_input_FC4, self.d_output_FC4),
-            nn.ReLU()).to(self.device)
+            nn.ReLU()
+        ).to(self.device)
 
         # Fully connected 5
         self.d_input_FC5 = self.m
         self.d_output_FC5 = self.m * args.in_mult_KNet
         self.FC5 = nn.Sequential(
             nn.Linear(self.d_input_FC5, self.d_output_FC5),
-            nn.ReLU()).to(self.device)
+            nn.ReLU()
+        ).to(self.device)
 
         # Fully connected 6
         self.d_input_FC6 = self.m
         self.d_output_FC6 = self.m * args.in_mult_KNet
         self.FC6 = nn.Sequential(
             nn.Linear(self.d_input_FC6, self.d_output_FC6),
-            nn.ReLU()).to(self.device)
+            nn.ReLU()
+        ).to(self.device)
 
         # Fully connected 7
         self.d_input_FC7 = 2 * self.n
         self.d_output_FC7 = 2 * self.n * args.in_mult_KNet
         self.FC7 = nn.Sequential(
             nn.Linear(self.d_input_FC7, self.d_output_FC7),
-            nn.ReLU()).to(self.device)
+            nn.ReLU()
+        ).to(self.device)
+
+        return None
 
     ##################################
     #   Initialize System Dynamics
     ##################################
-    def InitSystemDynamics(self, f, h, m, n):
+
+    def InitSystemDynamics(self, f, h, m: int, n: int) -> None:
         """
         :param f: The state evolution function that describes how the system's state evolves over time.
         :param h: The observation function that maps the system's state to the observed measurements.
@@ -237,10 +263,13 @@ class KalmanNet(torch.nn.Module):
         self.h = h
         self.n = n
 
+        return None
+
     ###########################
     #   Initialize Sequence
     ###########################
-    def InitSequence(self, M1_0, T):
+
+    def InitSequence(self, M1_0: torch.tensor, T: int) -> None:
         """
         Initialize the sequence with given parameters.
 
@@ -255,25 +284,26 @@ class KalmanNet(torch.nn.Module):
         self.m1x_prior_previous = self.m1x_posterior
         self.y_previous = self.h(self.m1x_posterior)
 
+        return None
+
     ######################
     #   Compute Priors
     ######################
-    def step_prior(self):
-        """
-        Perform the prior step in the filtering process.
 
-        :return: None
-        """
+    def StepPrior(self) -> None:
         # Predict the 1-st moment of x
         self.m1x_prior = self.f(self.m1x_posterior)
 
         # Predict the 1-st moment of y
         self.m1y = self.h(self.m1x_prior)
 
+        return None
+
     ##############################
     #   Kalman Gain Estimation
     ##############################
-    def step_KGain_est(self, y):
+
+    def step_KGain_est(self, y: torch.tensor):
         """
         :param y: Tensor of shape [batch_size, m, 1]. Observation input.
         :return: None.
@@ -299,7 +329,8 @@ class KalmanNet(torch.nn.Module):
         `self.m1x_posterior`, `self.m1x_posterior_previous`, `self.m1x_prior_previous`) which are
         * used in the calculations.
         """
-        # both in size [batch_size, n]
+
+        # Both in size [batch_size, n]
         obs_diff = torch.squeeze(y, 2) - torch.squeeze(self.y_previous, 2)
         obs_innov_diff = torch.squeeze(y, 2) - torch.squeeze(self.m1y, 2)
         # both in size [batch_size, m]
@@ -317,10 +348,13 @@ class KalmanNet(torch.nn.Module):
         # Reshape Kalman Gain to a Matrix
         self.KGain = torch.reshape(KG, (self.batch_size, self.m, self.n))
 
+        return None
+
     #######################
     #    Kalman Net Step
     #######################
-    def KNet_step(self, y):
+
+    def KNet_step(self, y: torch.tensor) -> torch.tensor:
         """
         :param y: A tensor representing the observation values. Shape should be [batch_size, n, 1].
         :return: A tensor representing the updated posterior moment. Shape is [batch_size, n, 1].
@@ -336,21 +370,9 @@ class KalmanNet(torch.nn.Module):
         5. Update previous state estimates: Update the previous state estimates with the current estimates.
         6. Update previous observation: Update the previous observation with the current observation value.
         7. Return the updated posterior moment.
-
-        Example usage:
-        ```
-        # Create an instance of the class
-        knet = KNet()
-
-        # Generate observation value 'y'
-        y = torch.tensor([[[0.5], [1.0], [1.5]]])
-
-        # Perform one step of the Kalman filter algorithm
-        result = knet.KNet_step(y)
-        ```
         """
         # Compute Priors
-        self.step_prior()
+        self.StepPrior()
 
         # Compute Kalman Gain
         self.step_KGain_est(y)
@@ -375,7 +397,15 @@ class KalmanNet(torch.nn.Module):
     ########################
     #    Kalman Gain Step
     ########################
-    def KGain_step(self, obs_diff, obs_innov_diff, fw_evol_diff, fw_update_diff):
+
+    def KGain_step(
+            self,
+            obs_diff: torch.tensor,
+            obs_innov_diff: torch.tensor,
+            fw_evol_diff: torch.tensor,
+            fw_update_diff: torch.tensor
+    ) -> torch.tensor:
+
         """
         Applies the KGain step in the forward and backward flow.
 
@@ -384,7 +414,6 @@ class KalmanNet(torch.nn.Module):
         :param fw_evol_diff: The forward evolution difference.
         :param fw_update_diff: The forward update difference.
         :return: The output of FC2 layer.
-
         """
         def expand_dim(x):
             expanded = torch.empty(self.seq_len_input, self.batch_size, x.shape[-1]).to(self.device)
@@ -452,7 +481,8 @@ class KalmanNet(torch.nn.Module):
     ###############
     #   Forward
     ###############
-    def forward(self, y):
+
+    def forward(self, y: torch.tensor) -> torch.tensor:
         """
         :param y: The input data to be propagated forward in the network.
         :return: The output of the forward propagation step.
@@ -463,22 +493,23 @@ class KalmanNet(torch.nn.Module):
     #########################
     #    Init Hidden State
     #########################
-    def init_hidden_KNet(self):
+
+    def init_hidden_KNet(self) -> None:
         """
         Initialize hidden states for the KNet model.
-
-        :return: None
         """
         weight = next(self.parameters()).data
+
         hidden = weight.new(self.seq_len_input, self.batch_size, self.d_hidden_S).zero_()
         self.h_S = hidden.data
-        self.h_S = self.prior_S.flatten().reshape(1, 1, -1).repeat(self.seq_len_input, self.batch_size,
-                                                                   1)  # batch size expansion
+        self.h_S = self.prior_S.flatten().reshape(1, 1, -1).repeat(self.seq_len_input, self.batch_size, 1)
+
         hidden = weight.new(self.seq_len_input, self.batch_size, self.d_hidden_Sigma).zero_()
         self.h_Sigma = hidden.data
-        self.h_Sigma = self.prior_Sigma.flatten().reshape(1, 1, -1).repeat(self.seq_len_input, self.batch_size,
-                                                                           1)  # batch size expansion
+        self.h_Sigma = self.prior_Sigma.flatten().reshape(1, 1, -1).repeat(self.seq_len_input, self.batch_size, 1)
+
         hidden = weight.new(self.seq_len_input, self.batch_size, self.d_hidden_Q).zero_()
         self.h_Q = hidden.data
-        self.h_Q = self.prior_Q.flatten().reshape(1, 1, -1).repeat(self.seq_len_input, self.batch_size,
-                                                                   1)  # batch size expansion
+        self.h_Q = self.prior_Q.flatten().reshape(1, 1, -1).repeat(self.seq_len_input, self.batch_size, 1)
+
+        return None

@@ -1,5 +1,7 @@
 import torch
 
+# TODO: Finish the comments on the code to explain each variable
+
 
 class SystemModel:
 
@@ -8,57 +10,54 @@ class SystemModel:
         ####################
         #   Motion Model
         ####################
-        self.Target = None
-        self.Input = None
-        self.lengthMask = None
-        self.m1x_0_rand = None
-        self.y = None
-        self.x = None
-        self.m2x_0_batch = None
-        self.x_prev = None
-        self.m1x_0_batch = None
-        self.m2x_0 = None
-        self.m1x_0 = None
-        self.f = f
-        self.m = m
-        self.Q = Q
+
+        self.y = None                    # Observation vector
+        self.x = None                    # Current state vector
+        self.x_prev = None               # Previous state vector
+
+        self.f = f                       # State transition function
+        self.m = m                       # Dimension of the state vector
+        self.Q = Q                       # Process noise covariance matrix
+
+        self.Input = None                #
+        self.Target = None               #
+        self.lengthMask = None           #
+
+        self.m1x_0 = None                #
+        self.m1x_0_rand = None           #
+        self.m1x_0_batch = None          #
+
+        self.m2x_0 = None                #
+        self.m2x_0_batch = None          #
 
         #########################
         #   Observation Model
         #########################
-        self.H = h
-        self.n = n
-        self.R = R
+
+        self.n = n                       #
+        self.H = h                       #
+        self.R = R                       #
 
         ################
         #   Sequence
         ################
-        # Assign T
-        self.T = T
-        self.T_test = T_test
+
+        self.T = T                       #
+        self.T_test = T_test             #
 
         #########################
         #   Covariance Priors
         #########################
-        if prior_Q is None:
-            self.prior_Q = torch.eye(self.m)
-        else:
-            self.prior_Q = prior_Q
 
-        if prior_Sigma is None:
-            self.prior_Sigma = torch.zeros((self.m, self.m))
-        else:
-            self.prior_Sigma = prior_Sigma
-
-        if prior_S is None:
-            self.prior_S = torch.eye(self.n)
-        else:
-            self.prior_S = prior_S
+        self.prior_Q = torch.eye(self.m) if prior_Q is None else prior_Q
+        self.prior_S = torch.eye(self.n) if prior_S is None else prior_S
+        self.prior_Sigma = torch.zeros((self.m, self.m)) if prior_Sigma is None else prior_Sigma
 
     #####################
     #    Init Sequence
     #####################
-    def InitSequence(self, m1x_0, m2x_0):
 
+    def InitSequence(self, m1x_0, m2x_0) -> None:
         self.m1x_0 = m1x_0
         self.m2x_0 = m2x_0
+        return None

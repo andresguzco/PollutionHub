@@ -15,6 +15,7 @@ Klegend = [
     "Unsupervised KalmanNet - Test",
     "Kalman Filter"
 ]
+
 RTSlegend = [
     "RTSNet - Train",
     "RTSNet - Validation",
@@ -22,6 +23,7 @@ RTSlegend = [
     "RTS Smoother",
     "Kalman Filter"
 ]
+
 ERTSlegend = [
     "RTSNet - Train",
     "RTSNet - Validation",
@@ -29,6 +31,7 @@ ERTSlegend = [
     "RTS",
     "EKF"
 ]
+
 error_evol = [
     "KNet Empirical Error",
     "KNet Covariance Trace",
@@ -37,10 +40,10 @@ error_evol = [
     "KNet Error Deviation",
     "EKF Error Deviation"
 ]
+
 # Color
 KColor = ['-ro', 'darkorange', 'k-', 'b-', 'g-']
 RTSColor = ['red', 'darkorange', 'g-', 'b-']
-
 mpl.rcParams['agg.path.chunksize'] = 1E4
 
 
@@ -109,8 +112,7 @@ class Plot_KF:
         self.folderName = folderName
         self.modelName = modelName
 
-    def NNPlot_epochs(self, N_Epochs_plt, MSE_KF_dB_avg,
-                      MSE_test_dB_avg, MSE_cv_dB_epoch, MSE_train_dB_epoch):
+    def NNPlot_epochs(self, N_Epochs_plt, MSE_KF_dB_avg, MSE_test_dB_avg, MSE_cv_dB_epoch, MSE_train_dB_epoch):
         """
         Plot the MSE Loss Value [dB] for each epoch.
 
@@ -119,7 +121,6 @@ class Plot_KF:
         :param MSE_test_dB_avg: The average MSE loss value for the test data.
         :param MSE_cv_dB_epoch: The MSE loss value for the CV data for each epoch.
         :param MSE_train_dB_epoch: The MSE loss value for the training data for each epoch.
-        :return: None
         """
         # File Name
         fileName = self.folderName + 'plt_epochs_dB'
@@ -185,8 +186,6 @@ class Plot_KF:
           - The difference between the "base" and "minus" values in dB, and the difference between the "plus"
           and "base" values in dB.
           - The "KalmanNet" value in dB and the difference between the "KalmanNet" value and the "base" value in dB.
-
-        Note: This method is static and does not require an instance of the class to be called.
         """
         plt.figure(figsize=(50, 20))
         x_plt = [-6, 0, 6]

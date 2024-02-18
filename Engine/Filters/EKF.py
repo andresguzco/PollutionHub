@@ -1,10 +1,11 @@
+import Engine.ModelFrame
+import Interface.config
 import torch.nn as nn
 import torch
 import time
 
-import Engine.ModelFrame
-import Interface.config
 
+# TODO: Finish the allocation of the result on the test function.
 
 class ExtendedKalmanFilter:
     """
@@ -55,27 +56,34 @@ class ExtendedKalmanFilter:
         GenerateBatch: Generates batched observations and updates the state estimates
     """
 
-    def __init__(self, SystemModel: Engine.ModelFrame.SystemModel, args: Interface.config.general_settings()):
-        # Device
-        self.sigma = None
+    def __init__(
+            self,
+            SystemModel: Engine.ModelFrame.SystemModel,
+            args: Interface.config.general_settings()
+    ):
         self.x = None
         self.i = None
+        self.dy = None
+        self.KG = None
+        self.sigma = None
         self.KG_array = None
         self.batch_size = None
-        self.m2x_0_batch = None
+
         self.m1x_0_batch = None
-        self.batched_H_T = None
+        self.m2x_0_batch = None
         self.batched_H = None
-        self.batched_F_T = None
+        self.batched_H_T = None
         self.batched_F = None
-        self.dy = None
-        self.m2x_posterior = None
+        self.batched_F_T = None
+
         self.m1x_posterior = None
-        self.KG = None
-        self.m2y = None
+        self.m2x_posterior = None
+
         self.m1y = None
-        self.m2x_prior = None
+        self.m2y = None
         self.m1x_prior = None
+        self.m2x_prior = None
+
         if args.use_cuda:
             self.device = torch.device('cuda')
         else:
@@ -95,11 +103,7 @@ class ExtendedKalmanFilter:
         self.T = SystemModel.T
         self.T_test = SystemModel.T_test
 
-    # Predict
     def Predict(self):
-        """Predicts the moments of x and y.
-        :return: None
-        """
         # Predict the 1-st moment of x
         self.m1x_prior = self.f(self.m1x_posterior).to(self.device)
         # Compute the Jacobians
@@ -114,7 +118,6 @@ class ExtendedKalmanFilter:
         self.m2y = torch.bmm(self.batched_H, self.m2x_prior)
         self.m2y = torch.bmm(self.m2y, self.batched_H_T) + self.R
 
-    # Compute the Kalman Gain
     def KGain(self):
         """
         Calculate the Kalman Gain(KG).
@@ -124,9 +127,8 @@ class ExtendedKalmanFilter:
         2. Perform matrix multiplication between the resulting tensor and the inverse of the m2y tensor.
         3. Save the KG in the KG_array tensor at the corresponding position.
         4. Increment the value of 'i'.
-
-        :return: None
         """
+
         self.KG = torch.bmm(self.m2x_prior, self.batched_H_T)
         self.KG = torch.bmm(self.KG, torch.inverse(self.m2y))
 
@@ -134,21 +136,10 @@ class ExtendedKalmanFilter:
         self.KG_array[:, :, :, self.i] = self.KG
         self.i += 1
 
-    # Innovation
     def Innovation(self, y):
-        """
-        :param y: the value to subtract from self.m1y
-        :return: None
-        """
         self.dy = y - self.m1y
 
-    # Compute Posterior
     def Correct(self):
-        """
-        Compute the 1-st and 2-nd posterior moments.
-
-        :return: None
-        """
         # Compute the 1-st posterior moment
         self.m1x_posterior = self.m1x_prior + torch.bmm(self.KG, self.dy)
 
@@ -170,13 +161,10 @@ class ExtendedKalmanFilter:
 
         return self.m1x_posterior, self.m2x_posterior
 
-    #########################
-
     def UpdateJacobians(self, F, H):
         """
         :param F: The batched F matrix
         :param H: The batched H matrix
-        :return: None
 
         This method updates the Jacobians for the given F and H matrices.
 
@@ -198,7 +186,6 @@ class ExtendedKalmanFilter:
 
         :param m1x_0_batch: The initial value for m1x_0_batch. Shape: [batch_size, m, 1]
         :param m2x_0_batch: The initial value for m2x_0_batch. Shape: [batch_size, m, m]
-        :return: None
         """
         self.m1x_0_batch = m1x_0_batch  # [batch_size, m, 1]
         self.m2x_0_batch = m2x_0_batch  # [batch_size, m, m]
@@ -206,13 +193,8 @@ class ExtendedKalmanFilter:
     ######################
     #   Generate Batch
     ######################
-    def GenerateBatch(self, y):
-        """
-        Generate batched data.
 
-        :param y: Input data.
-        :return: None.
-        """
+    def GenerateBatch(self, y):
         y = y.to(self.device)
         self.batch_size = y.shape[0]  # batch size
         T = y.shape[2]  # sequence length (maximum length if randomLength=True)
@@ -275,6 +257,7 @@ def EKFTest(args, SysModel, test_input, test_target, test_init=None, test_length
     *, and length masks. It returns a list of values including MSE values, average MSE, average MSE in dB, KG array,
      and EKF output.
     """
+
     # Number of test samples
     N_T = test_target.size()[0]
 
@@ -285,8 +268,8 @@ def EKFTest(args, SysModel, test_input, test_target, test_init=None, test_length
     MSE_EKF_linear_arr = torch.zeros(N_T)
 
     # Allocate empty tensor for output
-    # EKF_out = torch.zeros([N_T, SysModel.m, test_input.size()[2]])               # N_T x m x T
-    # KG_array = torch.zeros([N_T, SysModel.m, SysModel.n, test_input.size()[2]])  # N_T x m x n x T
+    EKF_out = torch.zeros([N_T, SysModel.m, test_input.size()[2]])               # N_T x m x T
+    KG_array = torch.zeros([N_T, SysModel.m, SysModel.n, test_input.size()[2]])  # N_T x m x n x T
 
     start = time.time()
     EKF = ExtendedKalmanFilter(SysModel, args)

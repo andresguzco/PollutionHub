@@ -1,8 +1,11 @@
 from Engine.Utils.Plotter import Plot_extended
+import Engine.ModelFrame
 import torch.nn as nn
 import random
 import torch
 import time
+
+# TODO: Finish the comments on the code to explain each variable
 
 
 class Pipeline:
@@ -42,67 +45,90 @@ class Pipeline:
         ssModel (None): The state space model used for training.
 
     """
+
     def __init__(self, folderName, modelName):
         super().__init__()
+
         self.MSE_cv_dB_opt = None
         self.MSE_cv_idx_opt = None
+        self.MSE_test_dB_avg = None
         self.MSE_test_linear_avg = None
         self.MSE_test_linear_arr = None
-        self.MSE_test_dB_avg = None
         self.MSE_test_linear_std = None
-        self.test_std_dB = None
-        self.Plot = None
-        self.N_T = None
-        self.MSE_train_dB_epoch = None
-        self.MSE_train_linear_epoch = None
+
         self.MSE_cv_dB_epoch = None
+        self.MSE_train_dB_epoch = None
         self.MSE_cv_linear_epoch = None
-        self.N_CV = None
+        self.MSE_train_linear_epoch = None
+
+        self.Plot = None
+        self.test_std_dB = None
+
+        self.N_T = None
+        self.N_B = None
         self.N_E = None
-        self.optimizer = None
-        self.loss_fn = None
+        self.N_CV = None
+        self.N_steps = None
+
         self.alpha = None
+        self.loss_fn = None
+        self.optimizer = None
         self.weightDecay = None
         self.learningRate = None
-        self.N_B = None
-        self.N_steps = None
-        self.device = None
+
         self.args = None
         self.model = None
+        self.device = None
         self.ssModel = None
-        self.folderName = folderName + '/'
-        self.modelName = modelName
-        self.modelFileName = self.folderName + "model_" + self.modelName + ".pt"
-        self.PipelineName = self.folderName + "pipeline_" + self.modelName + ".pt"
 
-    def save(self):
+        self.modelName: str = modelName
+        self.folderName: str = folderName + '/'
+        self.modelFileName: str = self.folderName + "model_" + self.modelName + ".pt"
+        self.PipelineName: str = self.folderName + "pipeline_" + self.modelName + ".pt"
+
+    def save(self) -> None:
         torch.save(self, self.PipelineName)
+        return None
 
-    def setssModel(self, ssModel):
-        self.ssModel = ssModel
+    def setssModel(self, ssModel: Engine.ModelFrame.SystemModel) -> None:
+        self.ssModel: Engine.ModelFrame.SystemModel = ssModel
+        return None
 
     def setModel(self, model):
         self.model = model
 
-    def setTrainingParams(self, args):
+    def setTrainingParams(self, args) -> None:
         self.args = args
+
         if args.use_cuda:
             self.device = torch.device('cuda')
         else:
             self.device = torch.device('cpu')
+
         self.N_steps = args.n_steps  # Number of Training Steps
-        self.N_B = args.n_batch  # Number of Samples in Batch
+        self.N_B = args.n_batch      # Number of Samples in Batch
         self.learningRate = args.lr  # Learning Rate
-        self.weightDecay = args.wd  # L2 Weight Regularization - Weight Decay
-        self.alpha = args.alpha  # Composition loss factor
+        self.weightDecay = args.wd   # L2 Weight Regularization - Weight Decay
+        self.alpha = args.alpha      # Composition loss factor
+
         # MSE LOSS Function
         self.loss_fn = nn.MSELoss(reduction='mean')
-
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learningRate, weight_decay=self.weightDecay)
 
-    def NNTrain(self, SysModel, cv_input, cv_target, train_input, train_target, path_results,
-                MaskOnState=False, randomInit=False, cv_init=None, train_init=None,
-                train_lengthMask=None, cv_lengthMask=None):
+    def NNTrain(
+            self,
+            SysModel,
+            cv_input,
+            cv_target,
+            train_input,
+            train_target,
+            path_results,
+            MaskOnState=False,
+            cv_init=None,
+            train_init=None,
+            train_lengthMask=None,
+            cv_lengthMask=None
+    ):
 
         self.N_E = len(train_input)
         self.N_CV = len(cv_input)
@@ -131,9 +157,11 @@ class Pipeline:
             #   Training Sequence Batch
             ###############################
             self.optimizer.zero_grad()
+
             # Training Mode
             self.model.train()
             self.model.batch_size = self.N_B
+
             # Init Hidden State
             self.model.init_hidden_KNet()
 
@@ -161,16 +189,12 @@ class Pipeline:
                 ii += 1
 
             # Init Sequence
-            if randomInit:
-                train_init_batch = torch.empty([self.N_B, SysModel.m, 1]).to(self.device)
-                ii = 0
-                for index in n_e:
-                    train_init_batch[ii, :, 0] = torch.squeeze(train_init[index])
-                    ii += 1
-                self.model.InitSequence(train_init_batch, SysModel.T)
-            else:
-                self.model.InitSequence(
-                    SysModel.m1x_0.reshape(1, SysModel.m, 1).repeat(self.N_B, 1, 1), SysModel.T)
+            train_init_batch = torch.empty([self.N_B, SysModel.m, 1]).to(self.device)
+            ii = 0
+            for index in n_e:
+                train_init_batch[ii, :, 0] = torch.squeeze(train_init[index])
+                ii += 1
+            self.model.InitSequence(train_init_batch, SysModel.T)
 
             # Forward Computation
             for t in range(0, SysModel.T):
@@ -274,15 +298,11 @@ class Pipeline:
                 x_out_cv_batch = torch.empty([self.N_CV, SysModel.m, SysModel.T_test]).to(self.device)
 
                 # Init Sequence
-                if randomInit:
-                    if cv_init is None:
-                        self.model.InitSequence(
-                            SysModel.m1x_0.reshape(1, SysModel.m, 1).repeat(self.N_CV, 1, 1), SysModel.T_test)
-                    else:
-                        self.model.InitSequence(cv_init, SysModel.T_test)
-                else:
+                if cv_init is None:
                     self.model.InitSequence(
                         SysModel.m1x_0.reshape(1, SysModel.m, 1).repeat(self.N_CV, 1, 1), SysModel.T_test)
+                else:
+                    self.model.InitSequence(cv_init, SysModel.T_test)
 
                 for t in range(0, SysModel.T_test):
                     x_out_cv_batch[:, :, t] = torch.squeeze(self.model(torch.unsqueeze(cv_input[:, :, t], 2)))
@@ -409,7 +429,7 @@ class Pipeline:
 
         return [self.MSE_test_linear_arr, self.MSE_test_linear_avg, self.MSE_test_dB_avg, x_out_test, t]
 
-    def PlotTrain_KF(self, MSE_KF_linear_arr, MSE_KF_dB_avg):
+    def PlotTrain_KF(self, MSE_KF_linear_arr, MSE_KF_dB_avg) -> None:
 
         self.Plot = Plot_extended(self.folderName, self.modelName)
 
@@ -417,3 +437,4 @@ class Pipeline:
                                 self.MSE_test_dB_avg, self.MSE_cv_dB_epoch, self.MSE_train_dB_epoch)
 
         self.Plot.NNPlot_Hist(MSE_KF_linear_arr, self.MSE_test_linear_arr)
+        return None
