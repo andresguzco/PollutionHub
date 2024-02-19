@@ -1,9 +1,8 @@
 import torch.nn.functional as func
-import torch.nn as nn
-import torch
-
 import Engine.ModelFrame
 import Interface.config
+import torch.nn as nn
+import torch
 
 
 class KalmanNet(torch.nn.Module):
@@ -107,7 +106,7 @@ class KalmanNet(torch.nn.Module):
         Next, the method calls the 'InitSystemDynamics' method with the system model's f, h, m, and n parameters
         to initialize the system dynamics.
 
-        After that, the method initializes the Kalman gain neural network by calling the 'InitKGainNet' method
+        After that, the method initializes the Kalman gain neural network by calling the 'InitSTFNet' method
         with the system model's prior Q, prior Sigma, prior S parameters, and the additional
         * arguments.
 
@@ -122,7 +121,7 @@ class KalmanNet(torch.nn.Module):
             self.device = torch.device('cpu')
 
         self.InitSystemDynamics(SysModel.f, SysModel.H, SysModel.m, SysModel.n)
-        self.InitKGainNet(SysModel.prior_Q, SysModel.prior_Sigma, SysModel.prior_S, args)
+        self.InitSTFNet(SysModel.prior_Q, SysModel.prior_Sigma, SysModel.prior_S, args)
 
         return None
 
@@ -130,7 +129,7 @@ class KalmanNet(torch.nn.Module):
     #   Initialize Kalman Gain Network
     ######################################
 
-    def InitKGainNet(
+    def InitSTFNet(
             self,
             prior_Q: torch.tensor,
             prior_Sigma: torch.tensor,
@@ -138,7 +137,7 @@ class KalmanNet(torch.nn.Module):
             args: Interface.config.general_settings()
     ) -> None:
         """
-        Initializes the KGainNet model.
+        Initializes the STFNet model.
 
         :param prior_Q: Prior for the latent variable Q
         :param prior_Sigma: Prior for the latent variable Sigma
@@ -146,7 +145,7 @@ class KalmanNet(torch.nn.Module):
         :param args: Additional arguments
         :return: None
 
-        This method initializes the KGainNet model by setting the necessary parameters and creating the
+        This method initializes the STFNet model by setting the necessary parameters and creating the
         required layers and modules.
 
         **Parameters:**
@@ -189,7 +188,7 @@ class KalmanNet(torch.nn.Module):
 
         # Fully connected 2
         self.d_input_FC2 = self.d_hidden_S + self.d_hidden_Sigma
-        self.d_output_FC2 = self.n * self.m
+        self.d_output_FC2 = self.m ** 2
         self.d_hidden_FC2 = self.d_input_FC2 * args.out_mult_KNet
         self.FC2 = nn.Sequential(
             nn.Linear(self.d_input_FC2, self.d_hidden_FC2),
@@ -290,25 +289,26 @@ class KalmanNet(torch.nn.Module):
     #   Compute Priors
     ######################
 
-    def StepPrior(self) -> None:
+    def StepPrior(self, y) -> None:
         # Predict the 1-st moment of x
-        self.m1x_prior = self.f(self.m1x_posterior)
+        self.stepStateTransitionEst(y)
+        self.m1x_prior = self.f @ self.m1x_posterior
 
         # Predict the 1-st moment of y
-        self.m1y = self.h(self.m1x_prior)
+        self.m1y = self.h @ self.m1x_prior
 
         return None
 
     ##############################
-    #   Kalman Gain Estimation
+    # State Transition Estimation
     ##############################
 
-    def step_KGain_est(self, y: torch.tensor):
+    def stepStateTransitionEst(self, y: torch.tensor):
         """
         :param y: Tensor of shape [batch_size, m, 1]. Observation input.
         :return: None.
 
-        This method calculates the Kalman Gain for a given set of observations.
+        This method calculates the State Transition matrix for a given set of observations.
 
         The method takes in a tensor `y` representing the observations. The tensor should have a shape of
         [batch_size, m, 1], where `batch_size` is the number of input samples, and `m` is the
@@ -322,8 +322,8 @@ class KalmanNet(torch.nn.Module):
         4. Calculate the differences between the current posterior state estimates `self.m1x_posterior` and
         the previous prior state estimates `self.m1x_prior_previous`.
         5. Normalize the above differences using the L2 norm along dimension 1.
-        6. Perform the Kalman Gain step by calling the `KGain_step` method.
-        7. Reshape the resulting Kalman Gain tensor to [batch_size, m, n] and store it in the `self.KGain` attribute.
+        6. Perform the STF step by calling the `STFstep` method.
+        7. Reshape the resulting state transition tensor to [batch_size, m, n] and store it in the `self.f` attribute.
 
         Note: This method assumes the presence of certain attributes (`self.y_previous`, `self.m1y`,
         `self.m1x_posterior`, `self.m1x_posterior_previous`, `self.m1x_prior_previous`) which are
@@ -343,11 +343,25 @@ class KalmanNet(torch.nn.Module):
         fw_update_diff = func.normalize(fw_update_diff, p=2, dim=1, eps=1e-12, out=None)
 
         # Kalman Gain Network Step
-        KG = self.KGain_step(obs_diff, obs_innov_diff, fw_evol_diff, fw_update_diff)
+        STF = self.STFstep(obs_diff, obs_innov_diff, fw_evol_diff, fw_update_diff)
 
-        # Reshape Kalman Gain to a Matrix
-        self.KGain = torch.reshape(KG, (self.batch_size, self.m, self.n))
+        # Reshape State transition function to a Matrix
+        self.f = torch.reshape(STF, (self.batch_size, self.m, self.n))
 
+        return None
+
+    def computeKGain(self) -> None:
+        P = self.GRU_S.squeeze(0).view(self.batch_size, self.m, self.m)      # State covariance
+        R = self.GRU_Sigma.squeeze(0).view(self.batch_size, self.n, self.n)  # Measurement noise covariance
+
+        # Perform batched matrix operations for Kalman Gain computation
+        HT = torch.transpose(self.h, dim0=1, dim1=2)                         # Transpose H for each batch item
+        S = torch.bmm(self.h, torch.bmm(P, HT)) + R                          # Innovation covariance
+        S_inv = torch.inverse(S)                                             # Inverse of S for each item in the batch
+        KGain = torch.bmm(torch.bmm(P, HT), S_inv)                           # Kalman Gain for each item in the batch
+
+        # Store the computed Kalman Gain
+        self.KGain = KGain
         return None
 
     #######################
@@ -364,7 +378,7 @@ class KalmanNet(torch.nn.Module):
 
         Steps:
         1. Compute Priors: The method calls the step_prior() method to compute the prior estimates.
-        2. Compute Kalman Gain: The method calls the step_KGain_est() method to compute the Kalman Gain.
+        2. Compute Kalman Gain: The method calls the computeKGain() method to compute the Kalman Gain.
         3. Innovation: Compute the difference between the observation value and the previous state estimate.
         4. Compute the 1st posterior moment: Multiply the Kalman Gain by the innovation to obtain the posterior moment.
         5. Update previous state estimates: Update the previous state estimates with the current estimates.
@@ -372,10 +386,10 @@ class KalmanNet(torch.nn.Module):
         7. Return the updated posterior moment.
         """
         # Compute Priors
-        self.StepPrior()
+        self.StepPrior(y)
 
         # Compute Kalman Gain
-        self.step_KGain_est(y)
+        self.computeKGain()
 
         # Innovation
         dy = y - self.m1y  # [batch_size, n, 1]
@@ -398,7 +412,7 @@ class KalmanNet(torch.nn.Module):
     #    Kalman Gain Step
     ########################
 
-    def KGain_step(
+    def STFstep(
             self,
             obs_diff: torch.tensor,
             obs_innov_diff: torch.tensor,
@@ -407,7 +421,7 @@ class KalmanNet(torch.nn.Module):
     ) -> torch.tensor:
 
         """
-        Applies the KGain step in the forward and backward flow.
+        Applies the STF step in the forward and backward flow.
 
         :param obs_diff: The observation difference.
         :param obs_innov_diff: The observation innovation difference.
@@ -415,6 +429,7 @@ class KalmanNet(torch.nn.Module):
         :param fw_update_diff: The forward update difference.
         :return: The output of FC2 layer.
         """
+
         def expand_dim(x):
             expanded = torch.empty(self.seq_len_input, self.batch_size, x.shape[-1]).to(self.device)
             expanded[0, :, :] = x

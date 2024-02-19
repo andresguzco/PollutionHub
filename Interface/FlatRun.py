@@ -6,6 +6,8 @@ from datetime import datetime
 import config as config
 import torch
 
+# TODO: Finish the load into th
+
 
 class RunFlow(object):
     def __init__(self):
@@ -45,22 +47,30 @@ class RunFlow(object):
             return torch.device('cpu')
 
     def LoadData(self, m: int, n: int) -> None:
-        DatafolderName = './DTO/pm25_weer.csv'
-        dataFileName = ['data_lor_v0_rq3030_T20.pt']
+        DatafolderName = './DTO'
+        dataFileName = ['pm25_weer.csv']
         r2 = torch.tensor([1e-3])
         vdB = 0
         v = 10 ** (vdB / 10)
         q2 = torch.mul(v, r2)
 
         Q_structure = torch.eye(m)
+
         R_structure = torch.eye(m)
-        f = torch.eye(m)
-        h = torch.eye(m)
+        H_design = torch.eye(m)
+
+        def h(x, jacobian=False):
+            H = H_design.to(x.device).reshape((1, n, n)).repeat(x.shape[0], 1, 1)  # [batch_size, n, n] identity matrix
+            y = torch.bmm(H, x)
+            if jacobian:
+                return y, H
+            else:
+                return y
 
         Q = q2[0] * Q_structure
         R = r2[0] * R_structure
 
-        self.Database["System Model"] = SystemModel(f, Q, h, R, self.Args.T, self.Args.T_test, m, n)
+        self.Database["System Model"] = SystemModel(Q, h, R, self.Args.T, self.Args.T_test, m, n)
 
         [
             train_input_long,
@@ -72,7 +82,7 @@ class RunFlow(object):
             _,
             _,
             _
-         ] = torch.load(DatafolderName + dataFileName[0], map_location=self.Device)
+        ] = torch.load(DatafolderName + dataFileName[0], map_location=self.Device)
 
         self.Database["Train Target"] = train_target_long[:, :, 0:self.Args.T]
         self.Database["Train Input"] = train_input_long[:, :, 0:self.Args.T]

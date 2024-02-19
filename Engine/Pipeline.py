@@ -201,7 +201,7 @@ class Pipeline:
                 x_out_training_batch[:, :, t] = torch.squeeze(self.model(torch.unsqueeze(y_training_batch[:, :, t], 2)))
 
             # Compute Training Loss
-            MSE_trainbatch_linear_LOSS = 0
+            # MSE_trainbatch_linear_LOSS = 0
             if self.args.CompositionLoss:
                 y_hat = torch.zeros([self.N_B, SysModel.n, SysModel.T])
                 for t in range(SysModel.T):
@@ -308,7 +308,7 @@ class Pipeline:
                     x_out_cv_batch[:, :, t] = torch.squeeze(self.model(torch.unsqueeze(cv_input[:, :, t], 2)))
 
                 # Compute CV Loss
-                MSE_cvbatch_linear_LOSS = 0
+                # MSE_cvbatch_linear_LOSS = 0
                 if MaskOnState:
                     if self.args.randomLength:
                         for index in range(self.N_CV):
@@ -433,8 +433,13 @@ class Pipeline:
 
         self.Plot = Plot_extended(self.folderName, self.modelName)
 
-        self.Plot.NNPlot_epochs(self.N_steps, MSE_KF_dB_avg,
-                                self.MSE_test_dB_avg, self.MSE_cv_dB_epoch, self.MSE_train_dB_epoch)
+        self.Plot.NNPlot_epochs(
+            self.N_steps,
+            MSE_KF_dB_avg,
+            self.MSE_test_dB_avg,
+            self.MSE_cv_dB_epoch,
+            self.MSE_train_dB_epoch
+        )
 
         self.Plot.NNPlot_Hist(MSE_KF_linear_arr, self.MSE_test_linear_arr)
         return None

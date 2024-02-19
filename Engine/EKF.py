@@ -6,6 +6,7 @@ import time
 
 
 # TODO: Finish the allocation of the result on the test function.
+# TODO: Check implementation of the filter
 
 class ExtendedKalmanFilter:
     """
