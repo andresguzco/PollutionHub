@@ -12,39 +12,37 @@ class SystemModel:
         #   Motion Model
         ####################
 
-        self.y = None  # Observation vector
-        self.x = None  # Current state vector
-        self.x_prev = None  # Previous state vector
+        self.y = None            # Observation vector
+        self.x = None            # Current state vector
+        self.x_prev = None       # Previous state vector
 
-        self.f = f  # State transition function
-        self.m = m  # Dimension of the state vector
-        self.Q = Q  # Process noise covariance matrix
+        self.f = f               # State transition function
+        self.m = m               # Dimension of the state vector
+        self.Q = Q               # Process noise covariance matrix
 
-        self.Input = None  #
-        self.Target = None  #
-        self.lengthMask = None  #
+        self.lengthMask = None   # How long to mas the sequence
 
-        self.m1x_0 = None  #
-        self.m1x_0_rand = None  #
-        self.m1x_0_batch = None  #
+        self.m1x_0 = None        # Initialisation value for m1x
+        self.m1x_0_rand = None   # Boolean to initialise the prior randomly
+        self.m1x_0_batch = None  # Initialization for a batched m1x
 
-        self.m2x_0 = None  #
-        self.m2x_0_batch = None  #
+        self.m2x_0 = None        # Initialisation value for m2x
+        self.m2x_0_batch = None  # Initialization for a batched m1x
 
         #########################
         #   Observation Model
         #########################
 
-        self.n = n  #
-        self.H = h  #
-        self.R = R  #
+        self.n = n               # Observation vector dimension
+        self.H = h               # Observation transition matrix
+        self.R = R               # Feedforward matrix
 
         ################
         #   Sequence
         ################
 
-        self.T = T            #
-        self.T_test = T_test  #
+        self.T = T               # Sequence length
+        self.T_test = T_test     # Length for test sequence
 
         #########################
         #   Covariance Priors

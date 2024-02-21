@@ -115,6 +115,10 @@ class RunFlow(object):
 
 
 def main():
+    # TODO: Incorporate the HL data import, cleaning and imputation
+    # Data = HLData()
+    # m = Data.shape[0]
+    # n = Data.shape[1]
     m = 9
     n = 1000
     Printer: bool = True

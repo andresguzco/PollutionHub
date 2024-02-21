@@ -1,1 +1,1 @@
-# TODO: Import HL data, clean it, aggregate it and run the model.
+# TODO: Import HL data class from the thesis, and adapt it for the STF model.
