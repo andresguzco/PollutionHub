@@ -3,6 +3,9 @@ import torch.nn as nn
 import torch
 
 
+# TODO: Run the filter on each of the epochs to optimise it. Review the computatino of the oslostt
+
+
 class STFNet(torch.nn.Module):
     ###################
     #   Constructor
