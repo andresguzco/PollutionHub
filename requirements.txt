@@ -7,3 +7,4 @@ tqdm>=4.65.0
 torch
 filterpy>=1.4.5
 geopy>=2.4.1
+nfoursid>=1.0.1

@@ -71,7 +71,8 @@ class RunFlow:
         self.data.drop([
             'id', 'no2', 'pm10', 'pm10_cal', 'pm10_fac', 'pm10_max', 'pm10_min',
             'datum', 'tijd', 'components', 'sensortype', 'weekdag', 'uur', '#STN',
-            'jaar', 'maand', 'weeknummer', 'dag', 'H', 'T', 'U', 'YYYYMMDD', 'name'
+            'jaar', 'maand', 'weeknummer', 'dag', 'H', 'T', 'U', 'YYYYMMDD', 'name',
+            'pm25_cal', 'pm25_max', 'pm25_min', 'pm25_fac'
         ], axis=1, inplace=True)
 
         self.data.rename(columns={"DD": "Wind Angle", "FH": "Wind Speed"}, inplace=True)
